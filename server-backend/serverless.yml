@@ -1,0 +1,21 @@
+service: server-backend
+
+frameworkVersion: '1'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - SQS:*
+    Resource: "arn:aws:sqs:us-east-1:*:*"
+
+functions:
+  receive:
+    handler: server.receive
+    events:
+      - http:
+          path: receive
+          method: get
+          cors: true
