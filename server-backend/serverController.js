@@ -75,8 +75,6 @@ class ServerController {
         const queueObj = await this.getQueueUrlByQueueName(`${id}-server`);
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
 
-        console.log("messageData", messageData);
-
         if(!QueueUrl)
             return this.ERROMENSAGENS;
 
