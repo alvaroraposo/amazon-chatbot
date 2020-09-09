@@ -1,15 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
+import dotenv from 'dotenv';
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
+dotenv.config();
+
 app.post("/messages", async(req, res) => {
     const body = (req.body) ? req.body : null;
-    console.log("body", body)
-    const postResult = await axios.post('https://ke1lzcm9le.execute-api.us-east-1.amazonaws.com/dev/send', body);
+
+    const postResult = await axios.post(process.env.AWS_CLIENT_POST, body);
     const statusCode = (postResult) ? postResult.status : 500;
     const messageGroupId = (postResult && postResult.data) ? postResult.data.messageGroupId : -1;
     
@@ -29,7 +32,7 @@ app.get("/messages/:id", async(req, res) => {
         })
     }
 
-    const getFirstResult = await axios.get(`https://00yw61ayva.execute-api.us-east-1.amazonaws.com/dev/receive/${messageGroupId}`);
+    const getFirstResult = await axios.get(`${process.env.AWS_SERVER_GET}/${messageGroupId}`);
     const firstStatusCode = (getFirstResult) ? getFirstResult.status : 500;
     const firstMessage = (getFirstResult && getFirstResult.data) ? getFirstResult.data.messageBody : -1;
 
@@ -42,7 +45,7 @@ app.get("/messages/:id", async(req, res) => {
         })
     }
     
-    const getResult = await axios.get(`https://ke1lzcm9le.execute-api.us-east-1.amazonaws.com/dev/receive/${messageGroupId}`);
+    const getResult = await axios.get(`${process.env.AWS_CLIENT_GET}/${messageGroupId}`);
     const statusCode = (getResult) ? getResult.status: 500;
     const message = (getResult && getResult.data) ? getResult.data.messageBody : -1;
 
@@ -55,7 +58,8 @@ app.get("/messages/:id", async(req, res) => {
 
 })
 
-app.listen(4000, () =>{
-    console.log("Listening at PORT 4000");
-})
+const porta = process.env.PORT || 8081;
+app.listen(porta, () => {
+    console.log("APP INICIADA: PORTA", porta);
+});
 
