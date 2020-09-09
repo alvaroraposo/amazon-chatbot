@@ -16,6 +16,6 @@ functions:
     handler: server.receive
     events:
       - http:
-          path: receive
+          path: receive/{id}
           method: get
           cors: true

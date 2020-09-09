@@ -25,7 +25,6 @@ class ServerController {
 
         const queueObj = await this.getQueueUrlByQueueName(`${id}-client`);
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
-        console.log(QueueUrl);
 
         if(!QueueUrl) {
             return this.FILAVAZIAOBJECT;

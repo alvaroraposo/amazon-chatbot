@@ -15,19 +15,19 @@ class ClientSend extends ClientController{
 
   async send(event) {
     const data = (event && event.body) ? JSON.parse(event.body) : {
-      messageGroupId: "0",
+      messageGroupId: "fila-de-teste",
       messageDeduplicationId: "0",
       messageBody: "Mensagem de Teste Hardcoded"
     };
 
-    const isMessageGroupIdValid = (data && data.messageGroupId && data.messageGroupId.length > 5);
-    const messageGroupId = isMessageGroupIdValid ? data.messageGroupId : uuid.v1().toString();
+    const messageGroupId = data.messageGroupId;
+    console.log(messageGroupId);
+    
+    const resultCreateQueue = await this.createQueue(messageGroupId);
+    console.log(resultCreateQueue);
+    if(!resultCreateQueue || resultCreateQueue === this.ERROMENSAGENS)
+      return this.RETORNOCOMERRO;
 
-    if(!isMessageGroupIdValid) {      
-      const resultCreateQueue = await this.createQueue(messageGroupId);
-      if(!resultCreateQueue || resultCreateQueue === this.ERROMENSAGENS)
-        return this.RETORNOCOMERRO;
-    }
 
     const result = await this.postMessage(messageGroupId, data);
     if(!result || result === this.ERROMENSAGENS)

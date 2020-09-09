@@ -23,6 +23,6 @@ functions:
     handler: clientreceive.receive
     events:
       - http:
-          path: receive
+          path: receive/{id}
           method: get
           cors: true

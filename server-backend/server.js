@@ -21,9 +21,12 @@ class Server extends ServerController {
   }
 
   async receive (event) {
-    const id = (event && event.pathParameters) ? event.pathParameters.id : "a7d9d500-f175-11ea-9031-97bc4517d94a";   
-    if(event.pathParameters)
-      console.log("event.pathParameters.id", event.pathParameters.id);
+    const id = (event && event.pathParameters) ? event.pathParameters.id : null;   
+
+    if(!id) {
+      return this.RETORNOERROMENSAGENS
+    }
+      
       
     const message = await this.getNextMessage(id);
     

@@ -33,12 +33,18 @@ class ClientController {
             }
         }
 
-        const resultClient = await this.sqsObj.createQueue(paramsClient).promise();
-        const resultServer = await this.sqsObj.createQueue(paramsServer).promise();
+        try {
+            await this.getQueueUrlByQueueName(queueNameClient);
+            await this.getQueueUrlByQueueName(queueNameServer);
+        }
+        catch(error) {
+            const resultClient = await this.sqsObj.createQueue(paramsClient).promise();
+            const resultServer = await this.sqsObj.createQueue(paramsServer).promise();
 
-        if(!resultClient || !resultServer)
-            return this.ERROMENSAGENS;
-
+            if(!resultClient || !resultServer)
+                return this.ERROMENSAGENS;
+        }
+        
         return queueNameClient;
     }
 
@@ -49,7 +55,7 @@ class ClientController {
 
     async postMessage(messageGroupId, data) {        
         const {messageBody, messageDeduplicationId} = data;
-        const queueObj = await this.getQueueUrlByQueueName(`${messageGroupId}-client`);        
+        const queueObj = await this.getQueueUrlByQueueName(`${messageGroupId}-client`);       
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
         console.log("messageDeduplicationId", messageDeduplicationId);
 

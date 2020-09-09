@@ -22,6 +22,9 @@ class ClientReceive extends ClientController {
 
     async receive (event) {
         const id = (event && event.pathParameters) ? event.pathParameters.id : "a7d9d500-f175-11ea-9031-97bc4517d94a";   
+        if(!id)
+          return this.ERROMENSAGENS;
+          
         const message = await this.getNextMessage(id);
 
         return (message === this.FILAVAZIAOBJECT) ? this.RETORNOFILAVAZIA : (message === this.ERROMENSAGENS) ? this.RETORNOERROMENSAGENS : {
