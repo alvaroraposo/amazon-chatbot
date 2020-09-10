@@ -24,12 +24,12 @@ function CustomSearch ({previousStep, id}) {
       }
 
       setLoading(true);
-      const resPost = await axios.post('http://localhost:8081/messages', postParams);
+      const resPost = await axios.post('https://skycoders-backend.herokuapp.com/messages', postParams);
       const statusCodePost = resPost.data.statusCode;
 
       if(statusCodePost === 200) {
         const messageGroupId = resPost.data.body.messageGroupId;
-        const resGet = await axios.get(`http://localhost:8081/messages/${messageGroupId}`, postParams);
+        const resGet = await axios.get(`https://skycoders-backend.herokuapp.com/messages/${messageGroupId}`, postParams);
         const statusCodeGet = resGet.data.statusCode;
 
         if(statusCodeGet === 200) {
