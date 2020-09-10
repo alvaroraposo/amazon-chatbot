@@ -10,6 +10,10 @@ provider:
     Action:
       - SQS:*
     Resource: "arn:aws:sqs:us-east-1:*:*"
+  - Effect: Allow
+    Action:
+      - LEX:*
+    Resource: "arn:aws:lex:us-east-1:*:*"
 
 functions:
   receive:

@@ -33,10 +33,13 @@ function CustomSearch ({previousStep, id}) {
         const statusCodeGet = resGet.data.statusCode;
 
         if(statusCodeGet === 200) {
-          const messageBody = resGet.data.body.message;
+          console.log("recebidos:", resGet.data.body.message);
+          const receivedObject = JSON.parse(resGet.data.body.message);
+          
+          const messageBody = (receivedObject && !receivedObject.message && receivedObject.slots) ? "Thank you for shopping with us!" : (receivedObject) ? receivedObject.message : "Internal Server Error, could you repeat your order, please?"; 
 
           setConnectionParams({
-            messageBody
+            messageBody: messageBody
           });          
 
           setLoading(false);
@@ -48,7 +51,7 @@ function CustomSearch ({previousStep, id}) {
   }, [skipLoop]);
 
   return (
-    <span>{(!loading) ? connectionParams.messageBody : "aguarde..."}</span>
+    <span>{(!loading) ? connectionParams.messageBody : "Just a minute, please..."}</span>
   );
 }
 
@@ -58,7 +61,7 @@ function CustomChatbot ({id}) {
     [
       {
         id: '1',
-        message: 'Bom dia, em que posso ajudá-lo?',
+        message: 'Hi! May I help you?',
         trigger: '2',
       },
       {

@@ -1,0 +1,16 @@
+service: skycoders-chatbot
+
+frameworkVersion: '1'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - SQS:*
+    Resource: "arn:aws:sqs:us-east-1:*:*"
+
+functions:
+  hello:
+    handler: handler.hello

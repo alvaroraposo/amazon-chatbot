@@ -3,7 +3,7 @@ const ServerController = require('./serverController');
 
 class Server extends ServerController {
   constructor(sqs) {
-    super(sqs);
+    super(sqs, alexia);
 
     this.RETORNOFILAVAZIA = {
       statusCode: 204,
@@ -21,7 +21,7 @@ class Server extends ServerController {
   }
 
   async receive (event) {
-    const id = (event && event.pathParameters) ? event.pathParameters.id : null;   
+    const id = (event && event.pathParameters) ? event.pathParameters.id : "TestQueue";   
 
     if(!id) {
       return this.RETORNOERROMENSAGENS
@@ -41,5 +41,6 @@ class Server extends ServerController {
 
 const aws = require("aws-sdk");
 const sqs = new aws.SQS();
-const handler = new Server(sqs);
+const alexia = new aws.LexRuntime({apiVersion: '2016-11-28'});
+const handler = new Server(sqs, alexia);
 module.exports.receive = handler.receive.bind(handler);

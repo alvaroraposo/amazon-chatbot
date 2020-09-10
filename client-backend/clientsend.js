@@ -21,10 +21,8 @@ class ClientSend extends ClientController{
     };
 
     const messageGroupId = data.messageGroupId;
-    console.log(messageGroupId);
     
     const resultCreateQueue = await this.createQueue(messageGroupId);
-    console.log(resultCreateQueue);
     if(!resultCreateQueue || resultCreateQueue === this.ERROMENSAGENS)
       return this.RETORNOCOMERRO;
 

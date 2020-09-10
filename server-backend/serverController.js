@@ -3,8 +3,10 @@ const uuid = require('uuid');
 //https://medium.com/@drwtech/a-node-js-introduction-to-amazon-simple-queue-service-sqs-9c0edf866eca
 
 class ServerController {
-    constructor(sqsObj) {
+    constructor(sqsObj, alexia) {
         this.sqsObj = sqsObj;
+        this.alexiaObj = alexia;
+
         this.FILAVAZIAOBJECT = {
             mensagem: "Fila Vazia",
             receiptHandle: 0
@@ -77,9 +79,11 @@ class ServerController {
         if(!QueueUrl)
             return this.ERROMENSAGENS;
 
+        const mensagem = await this.askAlexia(messageData);
+
         const result = await this.sqsObj.sendMessage({
             MessageGroupId: id,
-            MessageBody: "O Cliente tem sempre razão!",
+            MessageBody: JSON.stringify(mensagem),
             MessageDeduplicationId: MessageId,
             QueueUrl
         }).promise();
@@ -87,80 +91,21 @@ class ServerController {
         return result
     }
 
-    // async createQueue(data) {
-    //     const isMessageGroupIdValid = (data && data.messageGroupId && data.messageGroupId.length > 5);
-    //     const messageGroupId = isMessageGroupIdValid ? data.messageGroupId : uuid.v1().toString();
-    //     this.messageGroupId = messageGroupId;
-    //     const queueName = messageGroupId + ".fifo";        
+    async askAlexia (messageData) {
+        console.log("messageData", messageData.Body);
 
-    //     const params = {
-    //         QueueName: queueName,
-    //         Attributes: {
-    //             'FifoQueue': 'true',
-    //         }
-    //     }
+        const params = {
+            botAlias: 'orderflowers', /* required */
+            botName: 'OrderFlowers', /* required */
+            userId: '12345678', /* required */
+            inputText: messageData.Body
+        };
 
-    //     const result = await this.sqsObj.createQueue(params).promise();
-    //     if(!result)
-    //         return this.ERROMENSAGENS;
+        const result = await this.alexiaObj.postText(params).promise();
+        console.log(result);
 
-    //     const queueResult = await this.sqsObj.getQueueUrl({"QueueName": `${queueName}`}).promise();
-    //     this.queueUrl = queueResult.QueueUrl;
-
-    //     return this.queueUrl;
-    // }
-
-
-    // async postMessage(data) {
-    //     if(!this.queueUrl) {
-    //         return this.ERROMENSAGENS;
-    //     }
-
-    //     const {messageBody, messageDeduplicationId} = data;
-
-    //     const result = await this.sqsObj.sendMessage({
-    //         MessageGroupId: this.messageGroupId,
-    //         MessageBody: messageBody,
-    //         MessageDeduplicationId: messageDeduplicationId,
-    //         QueueUrl: this.queueUrl
-    //     }).promise();
-
-    //     if(!result)
-    //         return this.ERROMENSAGENS;
-
-    //     return this.messageGroupId;
-    // }
-
-    // async getQueueUrlBy(id) {
-    //     if(!id) {
-    //         const queueList = await this.sqsObj.listQueues({}).promise();
-    //         if(queueList.QueueUrls.length > 0) {
-    //             let queueIndex = 0;
-
-    //             while(queueIndex < queueList.QueueUrls.length) {
-    //                 const params = {
-    //                     QueueUrl: queueList.QueueUrls[queueIndex],
-    //                     AttributeNames:["ApproximateNumberOfMessages"]
-    //                 }
-    //                 const {Attributes} = await this.sqsObj.getQueueAttributes(params).promise();
-    //                 const numberOfMessages = parseInt(Attributes.ApproximateNumberOfMessages);
-    //                 if(numberOfMessages > 0){
-    //                     const q = queueList.QueueUrls[queueIndex];
-    //                     return {QueueUrl: q};
-    //                 }                        
-                    
-    //                 queueIndex++;
-    //             }
-                
-    //         }
-
-    //         return {QueueUrl: null};
-    //     }
-
-    //     const queueUrl = await this.sqsObj.getQueueUrl({"QueueName": `${id}-client.fifo`}).promise();
-
-    //     return queueUrl;
-    // }
+        return result;
+    }
 }
 
 module.exports = ServerController;
