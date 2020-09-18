@@ -1,9 +1,10 @@
-//https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SQS.html
-//https://medium.com/@drwtech/a-node-js-introduction-to-amazon-simple-queue-service-sqs-9c0edf866eca
+const axios = require('axios');
+const uuid = require('uuid');
 
 class ClientController {
-    constructor(sqsObj) {
+    constructor(sqsObj, alexiaObj) {
         this.sqsObj = sqsObj;
+        this.alexiaObj = alexiaObj;
         this.FILAVAZIAOBJECT = {
             mensagem: "Fila Vazia",
             receiptHandle: 0
@@ -16,108 +17,123 @@ class ClientController {
     }
 
     async createQueue(messageGroupId) {                
-        const queueNameClient = messageGroupId + "-client.fifo";
         const queueNameServer = messageGroupId + "-server.fifo";
-
-        const paramsClient = {
-            QueueName: queueNameClient,
-            Attributes: {
-                'FifoQueue': 'true',
-            }
-        }
 
         const paramsServer = {
             QueueName: queueNameServer,
             Attributes: {
-                'FifoQueue': 'true',
+                FifoQueue: 'true',
             }
         }
-
+        let queueUrl = null;
         try {
-            await this.getQueueUrlByQueueName(queueNameClient);
-            await this.getQueueUrlByQueueName(queueNameServer);
+            queueUrl = await this.getQueueUrlByQueueName(queueNameServer);
         }
         catch(error) {
-            const resultClient = await this.sqsObj.createQueue(paramsClient).promise();
             const resultServer = await this.sqsObj.createQueue(paramsServer).promise();
-
-            if(!resultClient || !resultServer)
+            if(!resultServer)
                 return this.ERROMENSAGENS;
+            
+            queueUrl = resultServer.QueueUrl;
         }
         
-        return queueNameClient;
-    }
-
-    async getQueueUrlByQueueName(name) {
-        const queueUrl = await this.sqsObj.getQueueUrl({"QueueName": `${name}.fifo`}).promise();
         return queueUrl;
     }
 
-    async postMessage(messageGroupId, data) {        
-        const {messageBody, messageDeduplicationId} = data;
-        const queueObj = await this.getQueueUrlByQueueName(`${messageGroupId}-client`);       
-        const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
-        console.log("messageDeduplicationId", messageDeduplicationId);
+    async getQueueUrlByQueueName(name) {
+        const queueUrl = await this.sqsObj.getQueueUrl({"QueueName": `${name}`}).promise();
+        return queueUrl;
+    }
 
-        if(!QueueUrl) {
+    async postMessage(data) {          
+        if(!data)
             return this.ERROMENSAGENS;
-        }
 
-        const result = await this.sqsObj.sendMessage({
-            MessageGroupId: messageGroupId,
-            MessageBody: messageBody,
-            MessageDeduplicationId: messageDeduplicationId,            
-            QueueUrl
-        }).promise();
+        const result = await this.askAlexia(data);
 
         if(!result)
             return this.ERROMENSAGENS;
 
-        return messageGroupId;
+        return result;
     }
 
-    async getNextMessage(id) {
+    async postGeetings(id, name) {
 
-        const queueObj = await this.getQueueUrlByQueueName(`${id}-server`);
-        const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
+        const message = `Olá, ${name[0].firstName}. Em que posso ajudar?`;
 
-        if(!QueueUrl) {
-            return this.FILAVAZIAOBJECT;
-        }
-        
-        const receiveParams = {
-            AttributeNames: [
-                "SentTimestamp"
-            ],
-            MaxNumberOfMessages: 10,
-            VisibilityTimeout: 20,
-            MessageAttributeNames: ["All"],
-            QueueUrl,
-            WaitTimeSeconds: 0
+
+        const result = await axios.post("https://876bvfo0j9.execute-api.us-east-1.amazonaws.com/dev/send", {
+            messageGroupId: id,
+            messageDeduplicationId: uuid.v1(),
+            messageBody: JSON.stringify(message)
+        })
+
+        console.log("message", message, result.status);
+
+        if(!result || result.status !== 200)
+            return this.ERROMENSAGENS;
+
+        return result;
+    }
+
+    async askAlexia (messageData) {
+
+        const params = {
+            botAlias: 'skyBot', /* required */
+            botName: 'skybot', /* required */
+            userId: messageData.messageGroupId, /* required */
+            inputText: messageData.messageBody
         };
+
+        console.log("params", params);
+
+        const result = await this.alexiaObj.postText(params).promise();
+
+        return result;
+    }
+
+    // async getNextMessage(id) {
+
+    //     const queueObj = await this.getQueueUrlByQueueName(`${id}-server`);
+    //     const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
+
+    //     if(!QueueUrl) {
+    //         return this.FILAVAZIAOBJECT;
+    //     }
+        
+    //     const receiveParams = {
+    //         AttributeNames: [
+    //             "SentTimestamp"
+    //         ],
+    //         MaxNumberOfMessages: 10,
+    //         VisibilityTimeout: 20,
+    //         MessageAttributeNames: ["All"],
+    //         QueueUrl,
+    //         WaitTimeSeconds: 0
+    //     };
                
-        const data = await this.sqsObj.receiveMessage(receiveParams).promise();
-        if(!data || !data.Messages) {
-            return this.FILAVAZIAOBJECT;
-        }
+    //     const data = await this.sqsObj.receiveMessage(receiveParams).promise();
+    //     if(!data || !data.Messages) {
+    //         return this.FILAVAZIAOBJECT;
+    //     }
         
-        const {Body, MessageGroupId, MessageDeduplicationId, ReceiptHandle} = data.Messages[0];
+    //     const {Body, MessageGroupId, MessageDeduplicationId, ReceiptHandle} = data.Messages[0];
         
-        const deleteParams = {
-            QueueUrl,
-            ReceiptHandle: ReceiptHandle
-        };
+    //     const deleteParams = {
+    //         QueueUrl,
+    //         ReceiptHandle: ReceiptHandle
+    //     };
 
-        await this.sqsObj.deleteMessage(deleteParams).promise();
+    //     await this.sqsObj.deleteMessage(deleteParams).promise();
 
-        const message = {
-            messageGroupId: MessageGroupId,
-            messageDeduplicationId: MessageDeduplicationId,
-            messageBody: Body,
-        }
+    //     const message = {
+    //         messageGroupId: MessageGroupId,
+    //         messageDeduplicationId: MessageDeduplicationId,
+    //         messageBody: Body,
+    //     }
 
-        return message;
-    }
+    //     return message;
+    // }
 
     // async getNextMessage(id) {
 

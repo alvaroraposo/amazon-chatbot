@@ -10,6 +10,10 @@ provider:
     Action:
       - SQS:*
     Resource: "arn:aws:sqs:us-east-1:*:*"
+  - Effect: Allow
+    Action:
+      - LEX:*
+    Resource: "arn:aws:lex:us-east-1:*:*"
 
 functions:
   send:
@@ -25,4 +29,14 @@ functions:
       - http:
           path: receive/{id}
           method: get
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - Access-Control-Allow-Origin // I added this one
+              - Access-Control-Allow-Credentials // I added this one as well          

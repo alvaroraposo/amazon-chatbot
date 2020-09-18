@@ -8,13 +8,13 @@ class ServerController {
         this.alexiaObj = alexia;
 
         this.FILAVAZIAOBJECT = {
-            mensagem: "Fila Vazia",
-            receiptHandle: 0
+            messageBody: "Fila Vazia",
+            messagesWaiting: -1
         }
         
         this.ERROMENSAGENS = {
-            mensagem: "Erro ao acessar a fila de mensagens",
-            receiptHandle: -1
+            messageBody: "Erro ao acessar a fila de mensagens",
+            messagesWaiting: -1
         }
     }
 
@@ -23,9 +23,17 @@ class ServerController {
         return queueUrl;
     }
 
+    async receiveMessage(receiveParams) {
+        let data = null;
+
+        data = await this.sqsObj.receiveMessage(receiveParams).promise();       
+
+        return data;
+    }
+
     async getNextMessage(id) {
 
-        const queueObj = await this.getQueueUrlByQueueName(`${id}-client`);
+        const queueObj = await this.getQueueUrlByQueueName(`${id}-server`);
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
 
         if(!QueueUrl) {
@@ -34,26 +42,22 @@ class ServerController {
         
         const receiveParams = {
             AttributeNames: [
-                "SentTimestamp"
+                "All"
             ],
             MaxNumberOfMessages: 10,
             VisibilityTimeout: 20,
             MessageAttributeNames: ["All"],
             QueueUrl,
-            WaitTimeSeconds: 0
         };
-               
-        const data = await this.sqsObj.receiveMessage(receiveParams).promise();
+
+        let data = await this.receiveMessage(receiveParams);
+        
+
         if(!data || !data.Messages) {
             return this.FILAVAZIAOBJECT;
         }
-
-        const resultPost = await this.postMessage(id, data.Messages[0]);
-        if(!resultPost) {
-            return this.ERROMENSAGENS;
-        }
         
-        const {Body, MessageGroupId, MessageDeduplicationId, ReceiptHandle} = data.Messages[0];
+        const {Body, ReceiptHandle} = data.Messages[0];
         
         const deleteParams = {
             QueueUrl,
@@ -62,49 +66,44 @@ class ServerController {
 
         await this.sqsObj.deleteMessage(deleteParams).promise();
 
+        const attributes = await this.sqsObj.getQueueAttributes({QueueUrl, AttributeNames: ["ApproximateNumberOfMessagesNotVisible"]}).promise();
+        const number = attributes.Attributes.ApproximateNumberOfMessagesNotVisible
+
         const message = {
-            messageGroupId: MessageGroupId,
-            messageDeduplicationId: MessageDeduplicationId,
-            messageBody: "Mensagem recebida e resposta enviada com sucesso",
+            messageGroupId: id,
+            messageBody: Body,
+            messagesWaiting: number
         }
 
         return message;
     }
 
-    async postMessage(id, messageData) {
-        const {MessageId} = messageData;
-        const queueObj = await this.getQueueUrlByQueueName(`${id}-server`);
+    async getMessagesOnServerQueue(QueueUrl) {
+        const params = {
+            AttributeNames: [
+                "ApproximateNumberOfMessages"
+            ],
+            QueueUrl
+        };
+        const num = await this.sqsObj.getQueueAttributes(params);
+        return num;
+    }
+
+    async postMessage(messageData) {
+        const queueObj = await this.getQueueUrlByQueueName(`${messageData.messageGroupId}-server`);
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
 
         if(!QueueUrl)
             return this.ERROMENSAGENS;
 
-        const mensagem = await this.askAlexia(messageData);
-
         const result = await this.sqsObj.sendMessage({
-            MessageGroupId: id,
-            MessageBody: JSON.stringify(mensagem),
-            MessageDeduplicationId: MessageId,
+            MessageGroupId: messageData.messageGroupId,
+            MessageBody: JSON.stringify(messageData.messageBody),
+            MessageDeduplicationId: messageData.messageDeduplicationId,
             QueueUrl
         }).promise();
 
         return result
-    }
-
-    async askAlexia (messageData) {
-        console.log("messageData", messageData.Body);
-
-        const params = {
-            botAlias: 'orderflowers', /* required */
-            botName: 'OrderFlowers', /* required */
-            userId: '12345678', /* required */
-            inputText: messageData.Body
-        };
-
-        const result = await this.alexiaObj.postText(params).promise();
-        console.log(result);
-
-        return result;
     }
 }
 

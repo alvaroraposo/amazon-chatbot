@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import CustomChatbot from './components/CustomChatbot';
-const uuid = require('uuid');
 
 function App() {
-  const [messageGroupId] = useState(uuid.v1().toString());
+  const [messageGroupId, setMessageGroupId] = useState("");
 
+//  (<><input id="idInput" type="text" placeholder="Digite seu login VTex"/>
   return (
-    <CustomChatbot id={messageGroupId}/>
+    messageGroupId !== "" ? <CustomChatbot id={messageGroupId}/> : 
+
+    (<><input id="idInput" type="text" placeholder="Digite seu login VTex"/>
+    <button onClick={() => {setMessageGroupId(document.getElementById("idInput").value)}}>Enviar</button></>)
   );
 }
 

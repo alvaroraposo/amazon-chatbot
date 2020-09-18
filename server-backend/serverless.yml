@@ -16,10 +16,28 @@ provider:
     Resource: "arn:aws:lex:us-east-1:*:*"
 
 functions:
+  send:
+    handler: serversend.send
+    events:
+      - http:
+          path: send
+          method: post
+          cors: true
   receive:
-    handler: server.receive
+    handler: serverreceive.receive
     events:
       - http:
           path: receive/{id}
           method: get
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - Access-Control-Allow-Origin // I added this one
+              - Access-Control-Allow-Credentials // I added this one as well
+    timeout: 15
