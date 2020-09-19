@@ -16,13 +16,6 @@ provider:
     Resource: "arn:aws:lex:us-east-1:*:*"
 
 functions:
-  send:
-    handler: serversend.send
-    events:
-      - http:
-          path: send
-          method: post
-          cors: true
   receive:
     handler: serverreceive.receive
     events:

@@ -4,9 +4,16 @@ const uuid = require('uuid');
 
 class ServerSend extends ServerController{
   constructor(sqsObj){
-    super(sqsObj)
+    super(sqsObj);
+    this.headers = {
+      'Access-Control-Expose-Headers': 'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials': true,
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',            
+    };
     this.RETORNOCOMERRO = {
       statusCode: 500,
+      headers: this.headers,
       body: JSON.stringify({
         ...this.ERROMENSAGENS
       })
@@ -15,9 +22,9 @@ class ServerSend extends ServerController{
 
   async send(event) {
     const data = (event && event.body) ? JSON.parse(event.body) : {
-      messageGroupId: "fila-de-teste",
+      messageGroupId: "alvaroraposo-gmail-com",
       messageDeduplicationId: "0",
-      messageBody: "Mensagem de Teste Hardcoded"
+      messageBody: "Vamos consultar seu pedido"
     };
     
 //    const resultCreateQueue = await this.createQueue(messageGroupId);
@@ -29,10 +36,10 @@ class ServerSend extends ServerController{
     if(!result || result === this.ERROMENSAGENS)
       return this.RETORNOCOMERRO;
 
-    console.log("result", result);
     
     return {
       statusCode: 200,
+      headers: this.headers,
       body: JSON.stringify({
         message: "Mensagem enviada",
         messageGroupId: result

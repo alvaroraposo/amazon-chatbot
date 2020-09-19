@@ -3,9 +3,9 @@ const uuid = require('uuid');
 //https://medium.com/@drwtech/a-node-js-introduction-to-amazon-simple-queue-service-sqs-9c0edf866eca
 
 class ServerController {
-    constructor(sqsObj, alexia) {
+    constructor(sqsObj, alexa) {
         this.sqsObj = sqsObj;
-        this.alexiaObj = alexia;
+        this.alexaObj = alexa;
 
         this.FILAVAZIAOBJECT = {
             messageBody: "Fila Vazia",
@@ -19,6 +19,7 @@ class ServerController {
     }
 
     async getQueueUrlByQueueName(name) {
+        console.log("queue name", name);
         const queueUrl = await this.sqsObj.getQueueUrl({"QueueName": `${name}.fifo`}).promise();
         return queueUrl;
     }
@@ -90,7 +91,13 @@ class ServerController {
     }
 
     async postMessage(messageData) {
+        console.log(messageData);
         const queueObj = await this.getQueueUrlByQueueName(`${messageData.messageGroupId}-server`);
+        console.log(`${messageData.messageGroupId}-server`, queueObj);
+        
+        if(!queueObj)
+            return this.ERROMENSAGENS;
+
         const QueueUrl = (queueObj) ? queueObj.QueueUrl.toString() : null;
 
         if(!QueueUrl)

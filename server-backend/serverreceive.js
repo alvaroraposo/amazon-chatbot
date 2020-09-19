@@ -4,7 +4,7 @@ const {validateEmail} = require("./validations");
 
 class Server extends ServerController {
   constructor(sqs) {
-    super(sqs, alexia);
+    super(sqs, alexa);
 
     this.headers = {
       'Access-Control-Expose-Headers': 'Access-Control-Allow-Origin',
@@ -41,9 +41,7 @@ class Server extends ServerController {
         if(!email || !validateEmail(email))
           return this.RETORNOERROMENSAGENS;
           
-    const id = email.replace("@", "-").replace(".", "-").replace(".","-"); 
-
-    console.log("id", id);
+    const id = email.replace("@", "-").replace(".", "-").replace(".","-").replace(".","-"); 
 
     if(!id) {
       return this.RETORNOERROMENSAGENS
@@ -66,6 +64,6 @@ class Server extends ServerController {
 
 const aws = require("aws-sdk");
 const sqs = new aws.SQS();
-const alexia = new aws.LexRuntime({apiVersion: '2016-11-28'});
-const handler = new Server(sqs, alexia);
+const alexa = new aws.LexRuntime({apiVersion: '2016-11-28'});
+const handler = new Server(sqs, alexa);
 module.exports.receive = handler.receive.bind(handler);

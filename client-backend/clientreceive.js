@@ -1,11 +1,11 @@
 'use strict';
 const ClientController = require("./clientController");
 const {validateEmail} = require("./validations");
-const getNameByEmail = require("./vtexController");
+const {getNameByEmail} = require("./vtexController");
 
 class ClientReceive extends ClientController {
-    constructor(sqs) {
-        super(sqs);
+    constructor(sqs, alexa) {
+        super(sqs, alexa);
 
         this.headers = {
           'Access-Control-Expose-Headers': 'Access-Control-Allow-Origin',
@@ -36,7 +36,7 @@ class ClientReceive extends ClientController {
         if(!email || !validateEmail(email))
           return this.RETORNOERROMENSAGENS;
           
-        const id = email.replace("@", "-").replace(".", "-").replace(".","-");
+        const id = email.replace("@", "-").replace(".", "-").replace(".","-").replace(".","-");
 
         const resultQueue = await this.createQueue(id);
         console.log(id, resultQueue);
@@ -67,8 +67,7 @@ class ClientReceive extends ClientController {
 }
 
 const aws = require("aws-sdk");
-const { default: Axios } = require("axios");
 const sqs = new aws.SQS();
-
-const handler = new ClientReceive(sqs);
+const alexa = new aws.LexRuntime({apiVersion: '2016-11-28'});
+const handler = new ClientReceive(sqs, alexa);
 module.exports.receive = handler.receive.bind(handler);

@@ -22,7 +22,17 @@ functions:
       - http:
           path: send
           method: post
-          cors: true
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+              - Access-Control-Allow-Origin 
+              - Access-Control-Allow-Credentials 
   receive:
     handler: clientreceive.receive
     events:
@@ -38,5 +48,5 @@ functions:
               - X-Api-Key
               - X-Amz-Security-Token
               - X-Amz-User-Agent
-              - Access-Control-Allow-Origin // I added this one
-              - Access-Control-Allow-Credentials // I added this one as well          
+              - Access-Control-Allow-Origin 
+              - Access-Control-Allow-Credentials          

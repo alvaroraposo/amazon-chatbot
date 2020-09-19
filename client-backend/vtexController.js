@@ -20,6 +20,24 @@ async function getNameByEmail(email) {
     const result = await axios.get(queryUrl, options);
     
     return result.data;
-} 
+}
 
-module.exports = getNameByEmail;
+async function getOrderDetailsByOrderId(orderId) {
+    const baseUrl = `https://${ACCOUNT_NAME}.${ENVIRONMENT}.com.br`;
+    const queryUrl =  `${baseUrl}/api/oms/pvt/orders/${orderId}`
+
+    const options = {
+        headers: HEADERS,
+    }
+
+    try {
+        const result = await axios.get(queryUrl, options);
+        return result;
+
+    }
+    catch(error) {
+        return error.response;
+    }
+}
+
+module.exports = {getNameByEmail, getOrderDetailsByOrderId};

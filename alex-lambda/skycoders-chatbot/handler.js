@@ -1,8 +1,8 @@
 'use strict';
 
 class Handler {
-  constructor(alexia) {
-    this.alexiaObj = alexia;
+  constructor(alexa) {
+    this.alexaObj = alexa;
   }
 
   async hello (event) {
@@ -12,7 +12,7 @@ class Handler {
       userId: '12345678', /* required */
       inputText: 'I would like to buy some flowers'
     };
-    const result = await this.alexiaObj.postText(params).promise();
+    const result = await this.alexaObj.postText(params).promise();
     console.log(result.message);
     
     params = {
@@ -22,7 +22,7 @@ class Handler {
       inputText: 'I would like to buy some roses'
     };
 
-    const result2 = await this.alexiaObj.postText(params).promise();
+    const result2 = await this.alexaObj.postText(params).promise();
     console.log(result2.message);
     
     params = {
@@ -32,7 +32,7 @@ class Handler {
       inputText: 'tomorrow'
     };
 
-    const result3 = await this.alexiaObj.postText(params).promise();
+    const result3 = await this.alexaObj.postText(params).promise();
     console.log(result3.message);
 
     params = {
@@ -42,7 +42,7 @@ class Handler {
       inputText: 'noon'
     };
 
-    const result4 = await this.alexiaObj.postText(params).promise();
+    const result4 = await this.alexaObj.postText(params).promise();
     console.log(result4.message);
     params = {
       botAlias: 'orderflowers', /* required */
@@ -51,7 +51,7 @@ class Handler {
       inputText: 'yes'
     };
 
-    const result5 = await this.alexiaObj.postText(params).promise();
+    const result5 = await this.alexaObj.postText(params).promise();
     console.log(result5.slots);
 
     return {
@@ -69,6 +69,6 @@ class Handler {
 }
 
 const aws = require("aws-sdk");
-const alexia = new aws.LexRuntime({apiVersion: '2016-11-28'});
-const handler = new Handler(alexia);
+const alexa = new aws.LexRuntime({apiVersion: '2016-11-28'});
+const handler = new Handler(alexa);
 module.exports.hello = handler.hello.bind(handler);
