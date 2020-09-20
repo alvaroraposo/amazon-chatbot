@@ -1,12 +1,13 @@
 const uuid = require('uuid');
 const {getOrderDetailsByOrderId} = require("./vtexController");
 const {validateOrderId} = require("./validations");
-const {pedidoInvalidoSession, mesmoPedidoSession} = require("./lexSessions");
+const {zerarSession, mesmoPedidoSession, maisInfoSession} = require("./lexSessions");
 
 class ClientController {
-    constructor(sqsObj, alexaObj) {
+    constructor(sqsObj, alexaObj, alexaServiceObj) {
         this.sqsObj = sqsObj;
         this.alexaObj = alexaObj;
+        this.alexaServiceObj = alexaServiceObj;
         this.FILAVAZIAOBJECT = {
             mensagem: "Fila Vazia",
             receiptHandle: 0
@@ -30,8 +31,8 @@ class ClientController {
         let queueUrl = null;
         try {
             queueUrl = await this.getQueueUrlByQueueName(queueNameServer);
-            const esvaziar = await this.sqsObj.purgeQueue({QueueUrl: queueUrl.QueueUrl}).promise();
-            await this.alexaObj.putSession(pedidoInvalidoSession(messageGroupId));
+            await this.sqsObj.purgeQueue({QueueUrl: queueUrl.QueueUrl}).promise();
+            await this.alexaObj.putSession(zerarSession(messageGroupId));
         }
         catch(error) {
             const resultServer = await this.sqsObj.createQueue(paramsServer).promise();
@@ -96,6 +97,7 @@ class ClientController {
 
         const result = await this.alexaObj.postText(params).promise();
         const message = await this.processAlexaResult(result, messageData.messageGroupId);
+        console.log("mensagem:", message);
         const resultProcess = await this.sendMessageToQueue(messageData.messageGroupId, message);
 
         return resultProcess;
@@ -106,110 +108,120 @@ class ClientController {
         if(!result)
             return result;
 
-        const {message, slots, intentName} = result;
+        const {message, slots, intentName, dialogState} = result;
+        const generalParams = {
+            botAlias: 'skyBot', /* required */
+            botName: 'skybot', /* required */
+            userId: id, /* required */
+        };
+        
         let finalMessage = message;
         
-        if(intentName === "consultapedido") {
-            if(slots.pedido && slots.pedido.length > 0) {
-                if(!slots.mesmopedido) {
-                    if(!validateOrderId(slots.pedido)) {                    
-                        finalMessage =  pedidoInvalido(id, "Código do pedido inválido.");
-                    }
-                    else {                    
-                        const resultPedido = await getOrderDetailsByOrderId(slots.pedido);
-    
-                        if(resultPedido.status != 200) {
-                            finalMessage = await this.pedidoInvalido(id, "Sua conta não possui um pedido com o código informado.");
-                        }
-                        else {
-                            finalMessage = await this.pedidoValido(finalMessage, resultPedido.data);
-                        }                        
-                    }                
-                }
-                else {
-                    if(slots.mesmopedido.toLowerCase().includes("nao"))
-                    {
-                        if(!slots.outropedido) {
-                            const params = {
-                                botAlias: 'skyBot', /* required */
-                                botName: 'skybot', /* required */
-                                userId: id, /* required */
-                                inputText: "nao"
-                            };
-                    
-                            const response = await this.alexaObj.postText(params).promise();  
-                            finalMessage = response.message;                                               
-                        }
-                        else {
-                            if(slots.outropedido.toLowerCase().includes("sim")) {
-                                const response = await this.changeAlexaSession(pedidoInvalidoSession(id));
-                                finalMessage = response.message;
-                            }
-                            else {
-                                if(slots.outropedido.toLowerCase().includes("nao")) {
-                                    if(slots.ajudar) {
-                                        if(slots.ajudar.toLowerCase().includes("sim")) {
-                                            finalMessage = "Foi um prazer poder te ajudar! " + finalMessage;
-                                        }
-                                        else {
-                                            if(slots.outropedido.toLowerCase().includes("nao")) {
-                                                finalMessage = "Acho que infelizmente não consegui te ajudar desta vez. " + finalMessage;
-                                            }
-                                        }
-                                        
-                                        const params = {
-                                            botAlias: 'skyBot', /* required */
-                                            botName: 'skybot', /* required */
-                                            userId: id, /* required */
-                                            inputText: "fim"
-                                        };
-                                
-                                        const response = await this.alexaObj.postText(params).promise();  
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        if(slots.mesmopedido.toLowerCase().includes("sim")) {
-                            if(slots.maisinfo) {
-                                finalMessage = await this.mesmoPedido(slots);
-                                const response = await this.changeAlexaSession(mesmoPedidoSession(id, slots.pedido));
-                                finalMessage += ". " + response.message;
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                finalMessage = "Claro, vamos consultar seu pedido. " + finalMessage;
-            }
+        if(intentName !== "consultapedido")
+            return finalMessage;
+
+        if(!slots.pedido || slots.pedido.length <= 0)
+            return "Claro, vamos consultar seu pedido. " + finalMessage;
+
+        if(!slots.mesmopedido) {
+            if(!validateOrderId(slots.pedido))
+                return pedidoInvalido(id, "Código do pedido inválido.");
+
+            const resultPedido = await getOrderDetailsByOrderId(slots.pedido);
+
+            finalMessage = (resultPedido.status !== 200) ? await this.pedidoInvalido(id, "Sua conta não possui um pedido com o código informado.") : await this.pedidoValido(finalMessage, resultPedido.data);                               
+
+            return finalMessage;
         }
 
-        console.log("finalMessage", finalMessage);
+        if(slots.mesmopedido.toLowerCase().includes("nao")) {
+            if(!slots.outropedido) {
+                const params = {
+                    ...generalParams,
+                    inputText: "nao"
+                };
+        
+                const response = await this.alexaObj.postText(params).promise();  
+                return response.message;                                               
+            }
+
+            if(slots.outropedido.toLowerCase().includes("sim")) {
+                const response = await this.changeAlexaSession(zerarSession(id));
+                return response.message;
+            }
+
+            if(slots.outropedido.toLowerCase().includes("nao")) {
+                if(!slots.ajudar)
+                    return finalMessage;
+
+                if(slots.ajudar.toLowerCase().includes("sim"))
+                    finalMessage = "Foi um prazer poder te ajudar! " + finalMessage;
+                else if(slots.outropedido.toLowerCase().includes("nao"))
+                    finalMessage = "Acho que infelizmente não consegui te ajudar desta vez. " + finalMessage;
+                
+                const params = {
+                    ...generalParams,
+                    inputText: "fim"
+                };
+        
+                await this.alexaObj.postText(params).promise();  
+            }
+
+            return finalMessage;
+        }
+        
+        if(slots.mesmopedido.toLowerCase().includes("sim")) {
+            if(slots.maisinfo) {
+                finalMessage = await this.mesmoPedido(slots, id);
+                const response = await this.changeAlexaSession(mesmoPedidoSession(id, slots.pedido));
+                finalMessage += ". " + response.message;
+                return finalMessage;
+            }
+            
+            if(!dialogState || dialogState !== "Failed")
+                return finalMessage;
+                
+            const response = await this.changeAlexaSession(maisInfoSession(id, slots.pedido));
+            return response.message;
+        }
 
         return finalMessage;
     }
 
-    async mesmoPedido(slots) {
+    async mesmoPedido(slots, id) {
         let finalMessage = "";
-        const utteranceArray = ["quando", "prazo", "itens", "compras", "data", "compra", "valor", "quanto", "custo", "preço", "preco", "total", "local", "endereco", "endereco"];
+        const {enumerationValues} = await this.alexaServiceObj.getSlotType({version: "$LATEST", name: "TIPO_INFORMACAO"}).promise();
         const {data} = await getOrderDetailsByOrderId(slots.pedido);
+        const toFind = slots.maisinfo.toLowerCase();
 
-        const found = utteranceArray.find((item) => {
-            return slots.maisinfo.includes(item);
-        })
+        const found = enumerationValues.reduce((acc, tipo) => {
+            if(toFind.includes(tipo.value))
+                return acc = tipo.value;
+            
+            const syn = tipo.synonyms.find((syn) => {
+                return (toFind.includes(syn));
+            })
+
+            if(syn && syn.length > 0)
+                acc = tipo.value;
+
+            console.log(acc);
+            return acc; 
+        }, "");
+
+        if(!found || found.length <= 0) {
+            const response = await this.changeAlexaSession(maisInfoSession(id, slots.pedido));
+            return `Não foram encontrados dados referentes à informação \"${toFind}\". ` + response.message;
+        }
 
         switch(found){
-            case "quando":
             case "prazo":{
                 const entrega = new Date(data.shippingData.logisticsInfo[0].shippingEstimateDate);
                 const dataFormatada = entrega.getDate() + "/" + (entrega.getMonth()+1) + "/" + entrega.getFullYear();
                 finalMessage = "Prazo para entrega: " + dataFormatada;
                 break;
             }
-            case "itens": 
-            case "compras": {
+            case "itens": {
                 let count = 1;
                 const itens = data.items.reduce((acc, cur) => {
                     if(acc != "")
@@ -223,26 +235,18 @@ class ClientController {
                 finalMessage = itens;
                 break;
             }
-            case "data":
-            case "compra": {
+            case "data": {
                 const compra = new Date(data.creationDate);
                 const dataFormatada = compra.getDate() + "/" + (compra.getMonth()+1) + "/" + compra.getFullYear();
                 finalMessage = "Data da compra: " + dataFormatada;
                 break;
             }
-            case "valor":
-            case "quanto":
-            case "custo":
-            case "preço":
-            case "preco":
-            case "total": {
+            case "valor": {
                 const totalFormatado = "Valor Total do Pedido: R$ " + data.totals[0].value;
                 finalMessage = totalFormatado;
                 break;
             }
-            case "local":
-            case "endereço":
-            case "endereco": {  
+            case "local": {  
                 const local = data.shippingData.address.street + ". Número: " +  data.shippingData.address.number + " Bairro: " + data.shippingData.address.neighborhood;          
                 finalMessage = "Endereço de Entrega: " + local;
                 break;
@@ -253,7 +257,7 @@ class ClientController {
     }
 
     async pedidoInvalido(id, customMessage) {
-        const resultChangeSession = await this.changeAlexaSession(pedidoInvalidoSession(id)); 
+        const resultChangeSession = await this.changeAlexaSession(zerarSession(id)); 
         if(!resultChangeSession)
             return this.ERROMENSAGENS;   
 

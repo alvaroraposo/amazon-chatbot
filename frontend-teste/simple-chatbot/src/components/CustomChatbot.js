@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import ChatBot from 'react-simple-chatbot';
 import axios from 'axios';
+import {validateEmail} from './../utils/validations';
 const uuid = require('uuid');
 
 function ValidaMail ({id, triggerNextStep}) {
@@ -14,26 +15,38 @@ function ValidaMail ({id, triggerNextStep}) {
 
   useEffect(() => {
     const validaEmail = async () => {
+      const isEmailValido = validateEmail(id);
+
+      if(!isEmailValido) {
+        setConnectionParams({
+          messageBody: "O usuário deve estar logado para fazer uso de nossos serviços."          
+        })
+        triggerNextStep({trigger: '4'});
+        setLoading(!loading);
+        return;
+      }
+      
       const resValidaEmail = await axios.get(`https://ke1lzcm9le.execute-api.us-east-1.amazonaws.com/dev/receive/${id}`);
       const validaEmailCodePost = resValidaEmail.status;      
 
-      if(validaEmailCodePost === 200) {
-        const message = resValidaEmail.data.message;
-        let messageBody = "Olá, eu me chamo Sky!"
+      if(validaEmailCodePost !== 200)
+        return;
 
-        if(id !== message) {
-          messageBody = message;
-          triggerNextStep({trigger: '4'});
-        }
-        else {
-          triggerNextStep({trigger: '2'});
-        }
+      const message = resValidaEmail.data.message;
+      let messageBody = "Olá, eu me chamo Sky!"
 
-        setLoading(!loading);        
-        setConnectionParams({
-          messageBody
-        });                  
+      if(id !== message) {
+        messageBody = message;
+        triggerNextStep({trigger: '4'});
       }
+      else {
+        triggerNextStep({trigger: '2'});
+      }
+
+      setLoading(!loading);       
+      setConnectionParams({
+        messageBody
+      });                  
     }
 
     validaEmail();       
@@ -51,15 +64,7 @@ function BuscaMensagens (props) {
 
   useEffect(() => {    
     const enviarMensagem = async () => {
-      console.log("previousValue", props.previousStep.message);
-      const headers = {
-        'Access-Control-Expose-Headers': 'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Credentials': true,
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',            
-      }
-
-      const result = await axios.post(`https://ke1lzcm9le.execute-api.us-east-1.amazonaws.com/dev/send`, {
+      await axios.post(`https://ke1lzcm9le.execute-api.us-east-1.amazonaws.com/dev/send`, {
         messageGroupId: props.id,
         messageDeduplicationId: uuid.v1(),
         messageBody: props.previousStep.message,
